@@ -6,3 +6,133 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ---------------- USER ----------------
+model User {
+  id             String          @id @default(uuid())
+  name           String
+  email          String          @unique
+  phone          String?
+  role           Role            @default(CUSTOMER)
+  password       String
+  restaurants    Restaurant[]
+  orders         Order[]         @relation("CustomerOrders")
+  driverOrders   Order[]         @relation("DriverOrders")
+  reviews        Review[]
+  driverLocation DriverLocation?
+}
+
+// ---------------- RESTAURANT ----------------
+model Restaurant {
+  id          String     @id @default(uuid())
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id])
+  name        String
+  description String?
+  address     String
+  image       String?
+  cuisineType String?
+  isOpen      Boolean    @default(true)
+  rating      Float?     @default(0)
+  menuItems   MenuItem[]
+  orders      Order[]
+  reviews     Review[]
+}
+
+// ---------------- MENU ITEM ----------------
+model MenuItem {
+  id           String      @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  name         String
+  description  String?
+  price        Float
+  image        String?
+  isAvailable  Boolean     @default(true)
+  orderItems   OrderItem[]
+}
+
+// ---------------- ORDER ----------------
+model Order {
+  id            String        @id @default(uuid())
+  customerId    String
+  restaurantId  String
+  driverId      String?
+  customer      User          @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id])
+  driver        User?         @relation("DriverOrders", fields: [driverId], references: [id])
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  totalPrice    Float
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         OrderItem[]
+  payment       Payment?
+}
+
+// ---------------- ORDER ITEM ----------------
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  price      Float
+}
+
+// ---------------- DRIVER LOCATION ----------------
+model DriverLocation {
+  id        String   @id @default(uuid())
+  driverId  String   @unique
+  driver    User     @relation(fields: [driverId], references: [id])
+  lat       Float
+  lng       Float
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------- REVIEW ----------------
+model Review {
+  id           String     @id @default(uuid())
+  userId       String
+  restaurantId String
+  user         User       @relation(fields: [userId], references: [id])
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  rating       Int
+  comment      String?
+}
+
+// ---------------- PAYMENT ----------------
+model Payment {
+  id                    String        @id @default(uuid())
+  orderId               String        @unique
+  amount                Float
+  stripePaymentIntentId String
+  status                PaymentStatus
+  createdAt             DateTime      @default(now())
+  order                 Order         @relation(fields: [orderId], references: [id])
+}
+
+// ---------------- ENUMS ----------------
+enum Role {
+  CUSTOMER
+  RESTAURANT_OWNER
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
