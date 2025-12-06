@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function SignupPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  async function handleSubmit(e: any) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     await fetch("/api/auth/signup", {
